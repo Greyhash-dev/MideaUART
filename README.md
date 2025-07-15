@@ -3,6 +3,16 @@ Arduino framework library for controlling Midea home appliances using the UART p
 
 Control is possible with a custom dongle. You can make it yourself according to numerous instructions on the Internet, or you can buy a ready-made one in [Tindie Shop](https://www.tindie.com/products/24607/), thereby supporting me and my work.
 
+## Supported Platforms
+
+**Primary Target**: ESP8266 (NodeMCU v2)  
+**Secondary Target**: ESP32  
+**Framework**: Arduino
+
+This library is optimized for ESP8266 but also supports ESP32. The comprehensive test framework ensures compatibility across both platforms.
+
+## Supported Brands
+
 A far from complete list of supported brands:
 1. [Midea](https://www.midea.com/)
 2. [Electrolux](https://www.electrolux.ru/)
@@ -78,6 +88,52 @@ void loop() {
   ac.loop();
 }
 ```
+
+## Testing & Development
+
+This library includes a comprehensive test framework for safe development and enhancement:
+
+### Quick Demo/Test (ESP8266 - Primary Target)
+```powershell
+# Complete demo with automatic upload and monitoring
+.\demo_complete.bat
+
+# Quick test compilation and upload
+.\quick_test.bat
+```
+
+### Enhanced Serial Monitoring
+If you experience issues with PlatformIO's device monitor (common on Windows):
+
+```powershell
+# Enhanced monitoring script (multiple fallback options)
+.\monitor_device.bat
+
+# PowerShell alternative
+powershell -ExecutionPolicy Bypass -File monitor_device.ps1
+```
+
+### Full Test Suite (ESP8266 + ESP32)
+```powershell
+.\run_tests.bat
+```
+
+### Manual Commands
+```bash
+# Build and upload demo to ESP8266
+pio run -e demo_esp8266 -t upload
+
+# Monitor serial output (if PlatformIO monitor works)
+pio device monitor -e demo_esp8266
+
+# Alternative monitoring with specific COM port
+pio device monitor --port COM3 --baud 115200 --eol CRLF
+```
+
+### Troubleshooting Serial Monitor
+See [`SERIAL_MONITOR_GUIDE.md`](SERIAL_MONITOR_GUIDE.md) for comprehensive troubleshooting if monitoring doesn't work.
+
+For detailed testing information, see [`TESTING.md`](TESTING.md).
 
 ## My thanks
 
