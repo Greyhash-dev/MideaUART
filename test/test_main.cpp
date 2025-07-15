@@ -168,27 +168,105 @@ void test_getter_methods(void) {
 void setup() {
     // Initialize Serial for test output
     Serial.begin(115200);
-    delay(2000); // Wait for Serial Monitor
+    delay(2000); 
     
+    Serial.println("STEP 1: Serial initialized");
+    delay(500);
+    
+    Serial.println("STEP 2: Starting basic info collection");
+    Serial.print("ESP Chip ID: ");
+    Serial.println(ESP.getChipId(), HEX);
+    Serial.print("Free heap: ");
+    Serial.println(ESP.getFreeHeap());
+    delay(500);
+    
+    Serial.println("STEP 3: About to test MockStream creation");
+    {
+        MockStream testStream;
+        Serial.println("MockStream created and destroyed successfully");
+    }
+    delay(500);
+    
+    Serial.println("STEP 4: About to test FrameData creation");
+    {
+        FrameData data({0x01, 0x02, 0x03});
+        Serial.print("FrameData size: ");
+        Serial.println(data.size());
+    }
+    delay(500);
+    
+    Serial.println("STEP 5: About to test Frame creation");
+    {
+        FrameData data({0x01, 0x02, 0x03});
+        Frame frame(AIR_CONDITIONER, 0x01, 0x03, data);
+        Serial.print("Frame size: ");
+        Serial.println(frame.size());
+    }
+    delay(500);
+    
+    Serial.println("STEP 6: About to test AirConditioner creation");
+    {
+        AirConditioner ac;
+        Serial.println("AirConditioner created successfully");
+    }
+    delay(500);
+    
+    Serial.println("STEP 7: About to initialize Unity");
     UNITY_BEGIN();
+    Serial.println("Unity initialized successfully");
+    delay(500);
     
-    // Frame tests
+    Serial.println("STEP 8: Running comprehensive test suite");
+    
+    // Core tests
+    Serial.println("Testing frame creation...");
     RUN_TEST(test_frame_creation);
+    
+    Serial.println("Testing frame data operations...");
     RUN_TEST(test_frame_data_operations);
     
-    // Air conditioner tests
+    Serial.println("Testing AC initialization...");
     RUN_TEST(test_air_conditioner_initialization);
+    
+    Serial.println("Testing AC configuration...");
     RUN_TEST(test_air_conditioner_configuration);
+    
+    // Advanced tests
+    Serial.println("Testing AC power control...");
     RUN_TEST(test_air_conditioner_power_control);
+    
+    Serial.println("Testing AC control commands...");
     RUN_TEST(test_air_conditioner_control_commands);
+    
+    Serial.println("Testing AC setup and loop...");
     RUN_TEST(test_air_conditioner_setup_loop);
+    
+    Serial.println("Testing autoconf functionality...");
     RUN_TEST(test_autoconf_functionality);
-    RUN_TEST(test_communication_generation);
+    
+    Serial.println("Testing getter methods...");
     RUN_TEST(test_getter_methods);
     
+    Serial.println("Testing communication generation...");
+    RUN_TEST(test_communication_generation);
+    
+    Serial.println("All comprehensive tests completed!");
+    
     UNITY_END();
+    Serial.println("Unity test framework completed successfully!");
 }
 
 void loop() {
-    // Empty loop
+    // Provide feedback that the ESP is running
+    static unsigned long lastMessage = 0;
+    static int counter = 0;
+    
+    if (millis() - lastMessage > 5000) { // Every 5 seconds
+        lastMessage = millis();
+        counter++;
+        Serial.print("ESP-12E running in loop... #");
+        Serial.print(counter);
+        Serial.print(" - Free heap: ");
+        Serial.println(ESP.getFreeHeap());
+    }
 }
