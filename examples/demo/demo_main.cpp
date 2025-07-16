@@ -170,9 +170,8 @@ void loop()
             Serial.print(" [No commands sent, triggering periodic]");
             mockAC.triggerPeriodicCommand();
         } else {
-            // Always force a response to ensure we get something
-            Serial.print(" [Forcing response]");
-            mockAC.triggerStatusResponse();
+            // Don't force additional response - let the mock auto-respond to the actual command
+            Serial.print(" [Commands sent, auto-responding]");
         }
 
         Serial.print(" -> TX: ");
@@ -180,6 +179,18 @@ void loop()
         Serial.print(" bytes, RX: ");
         Serial.print(mockAC.getRxLength());
         Serial.println(" bytes");
+
+        // Show success/failure tracking statistics
+        Serial.print("   📊 AC Library Stats: Success=");
+        Serial.print(ac.getFrameSuccess());
+        Serial.print(", Failure=");
+        Serial.print(ac.getFrameFailure());
+        if (ac.getLastSuccessTime() > 0) {
+            Serial.print(", Last Success: ");
+            Serial.print((millis() - ac.getLastSuccessTime()) / 1000);
+            Serial.print("s ago");
+        }
+        Serial.println();
 
         // Show mock response status
         if (mockAC.getRxLength() > 0) {

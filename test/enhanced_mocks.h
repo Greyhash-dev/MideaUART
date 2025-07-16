@@ -148,6 +148,21 @@ private:
         
         if (txBuffer.length() < 3) return; // Need at least header
         
+        // Debug: Show what's in the TX buffer
+        if (txBuffer.length() > 0) {
+            Serial.print("   🔧 TX Buffer len=");
+            Serial.print(txBuffer.length());
+            Serial.print(": ");
+            for (int i = 0; i < min(16, (int)txBuffer.length()); i++) {
+                Serial.print("0x");
+                if ((uint8_t)txBuffer[i] < 0x10) Serial.print("0");
+                Serial.print((uint8_t)txBuffer[i], HEX);
+                Serial.print(" ");
+            }
+            if (txBuffer.length() > 16) Serial.print("...");
+            Serial.println();
+        }
+        
         // Find command start (0xAA)
         for (size_t i = 0; i <= txBuffer.length() - 3; i++) {
             if ((uint8_t)txBuffer[i] == 0xAA) {
@@ -155,14 +170,27 @@ private:
                 if (i + 1 < txBuffer.length()) {
                     uint8_t len = (uint8_t)txBuffer[i + 1];
                     
+                    Serial.print("   🔧 Found 0xAA at pos ");
+                    Serial.print(i);
+                    Serial.print(", len=");
+                    Serial.println(len);
+                    
                     // Check if we have the complete command
-                    if (len >= 8 && len <= 32 && i + len + 1 <= txBuffer.length()) {
+                    if (len >= 8 && len <= 50 && i + len + 1 <= txBuffer.length()) {
                         // Process this command
+                        Serial.println("   🔧 Processing command...");
                         processCommandAt(i);
                         
                         // Remove processed command from buffer
                         txBuffer = txBuffer.substring(i + len + 1);
                         return; // Process one command at a time
+                    } else {
+                        Serial.print("   🔧 Command incomplete: len=");
+                        Serial.print(len);
+                        Serial.print(", bufLen=");
+                        Serial.print(txBuffer.length());
+                        Serial.print(", needed=");
+                        Serial.println(i + len + 1);
                     }
                 }
             }
@@ -172,6 +200,28 @@ private:
     void processCommandAt(size_t pos) {
         uint8_t len = (uint8_t)txBuffer[pos + 1];
         uint8_t cmdType = (uint8_t)txBuffer[pos + 2];
+        uint8_t frameType = 0x03; // Default to DEVICE_QUERY response
+        
+        // Extract frame type from incoming command if available
+        if (len >= 10 && pos + 9 < txBuffer.length()) {
+            frameType = (uint8_t)txBuffer[pos + 9]; // OFFSET_TYPE = 9
+        }
+        
+        // Debug: Log the extracted frame information and full frame
+        Serial.print("   🔍 Mock RX: AppType=0x");
+        Serial.print(cmdType, HEX);
+        Serial.print(", FrameType=0x");
+        Serial.print(frameType, HEX);
+        Serial.print(", Len=");
+        Serial.print(len);
+        Serial.print(" | Full: ");
+        for (int i = 0; i < min(12, (int)min(len + 1, (int)(txBuffer.length() - pos))); i++) {
+            Serial.print("0x");
+            if ((uint8_t)txBuffer[pos + i] < 0x10) Serial.print("0");
+            Serial.print((uint8_t)txBuffer[pos + i], HEX);
+            Serial.print(" ");
+        }
+        Serial.println();
         
         // Always send a response, regardless of command type
         bool responseGenerated = false;
@@ -179,7 +229,7 @@ private:
         // Simulate different types of responses based on command type
         switch (cmdType) {
             case 0x20: // Device info request
-                sendDeviceInfoResponse();
+                sendDeviceInfoResponse(frameType);
                 responseGenerated = true;
                 break;
                 
@@ -201,78 +251,98 @@ private:
                     fanSpeed = (cmd2 >> 1) & 0x07; // Fan speed
                     swing = (cmd2 & 0x01) != 0; // Swing in LSB
                 }
-                sendStatusResponse();
+                sendStatusResponse(frameType);
                 responseGenerated = true;
                 break;
                 
             case 0x41: // Status request
-                sendStatusResponse();
+                sendStatusResponse(frameType);
                 responseGenerated = true;
                 break;
                 
             default:
                 // Send generic ACK for any unknown command
-                sendAckResponse();
+                sendAckResponse(frameType);
                 responseGenerated = true;
                 break;
         }
         
         // For debugging: always ensure we generate some response
         if (!responseGenerated) {
-            sendAckResponse();
+            sendAckResponse(frameType);
         }
     }
     
-    void sendDeviceInfoResponse() {
-        // Simulate device info response
-        uint8_t response[] = {
-            0xAA, 0x0E, 0xA0, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7E
+    void sendDeviceInfoResponse(uint8_t frameType = 0x03) {
+        // Create minimal valid device info response
+        uint8_t response[11] = {
+            0xAA,        // START_BYTE
+            0x0B,        // LENGTH (11 bytes total)
+            0xAC,        // APPTYPE (AIR_CONDITIONER)
+            0x00,        // SYNC (will be calculated)
+            0x00, 0x00, 0x00, 0x00,  // Reserved bytes
+            0x01,        // PROTOCOL
+            frameType,   // TYPE (echo the request type)
+            0x00         // CHECKSUM (will be calculated)
         };
         
-        addRxBytes(response, sizeof(response));
-    }
-    
-    void sendStatusResponse() {
-        // Create realistic status response based on current simulated state
-        uint8_t response[23] = {
-            0xAA, 0x15, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-        };
+        // Set sync field (length ^ apptype)
+        response[3] = response[1] ^ response[2];  // 0x0B ^ 0xAC
         
-        // Set power state (bit 0 of byte 8)
-        if (powerState) response[8] |= 0x01;
-        
-        // Set target temperature (bits 0-3 of byte 9)
-        response[9] = (targetTemp - 16) & 0x0F;
-        
-        // Set mode (bits 5-7 of byte 10)
-        response[10] = (mode << 5) & 0xE0;
-        
-        // Set fan speed (bits 1-3 of byte 10)
-        response[10] |= (fanSpeed << 1) & 0x0E;
-        
-        // Set swing (bit 0 of byte 10)
-        if (swing) response[10] |= 0x01;
-        
-        // Set current temperature (byte 11)
-        response[11] = currentTemp;
-        
-        // Calculate simple checksum for last byte
+        // Calculate checksum using library's method
         uint8_t checksum = 0;
-        for (int i = 0; i < 22; i++) {
-            checksum += response[i];
+        for (int i = 1; i < 10; i++) {  // Start from length field, exclude checksum
+            checksum -= response[i];
         }
-        response[22] = (~checksum + 1) & 0xFF;
+        response[10] = checksum;
         
         addRxBytes(response, sizeof(response));
     }
     
-    void sendAckResponse() {
-        // Simple ACK response
-        uint8_t ack[] = {0xAA, 0x06, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x7A};
-        addRxBytes(ack, sizeof(ack));
+    void sendStatusResponse(uint8_t frameType = 0x03) {
+        // Create hardcoded minimal valid response
+        uint8_t response[] = {0xAA, 0x0B, 0xAC, 0xA7, 0x00, 0x00, 0x00, 0x00, 0x01, frameType, 0x9A};
+        
+        // Recalculate checksum for the actual frameType
+        uint8_t checksum = 0;
+        for (int i = 1; i < 10; i++) {
+            checksum -= response[i];
+        }
+        response[10] = checksum;
+        
+        // Debug: Log the response being sent
+        Serial.print("   📤 Mock TX: FrameType=0x");
+        Serial.print(frameType, HEX);
+        Serial.print(", Checksum=0x");
+        Serial.println(checksum, HEX);
+        
+        addRxBytes(response, sizeof(response));
+    }
+    
+    void sendAckResponse(uint8_t frameType = 0x03) {
+        // Create minimal valid ACK response
+        uint8_t response[11] = {
+            0xAA,        // START_BYTE
+            0x0B,        // LENGTH (11 bytes total)
+            0xAC,        // APPTYPE (AIR_CONDITIONER)
+            0x00,        // SYNC (will be calculated)
+            0x00, 0x00, 0x00, 0x00,  // Reserved bytes
+            0x01,        // PROTOCOL
+            frameType,   // TYPE (echo the request type)
+            0x00         // CHECKSUM (will be calculated)
+        };
+        
+        // Set sync field (length ^ apptype)
+        response[3] = response[1] ^ response[2];  // 0x0B ^ 0xAC
+        
+        // Calculate checksum using library's method
+        uint8_t checksum = 0;
+        for (int i = 1; i < 10; i++) {  // Start from length field, exclude checksum
+            checksum -= response[i];
+        }
+        response[10] = checksum;
+        
+        addRxBytes(response, sizeof(response));
     }
 };
 

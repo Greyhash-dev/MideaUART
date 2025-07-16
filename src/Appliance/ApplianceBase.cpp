@@ -89,6 +89,9 @@ void ApplianceBase::m_handler(const Frame &frame) {
       if (result == RESPONSE_OK) {
         if (this->m_request->onSuccess != nullptr)
           this->m_request->onSuccess();
+        // Track successful frame
+        this->m_frameSuccess++;
+        this->m_lastSuccessTime = millis();
         this->m_destroyRequest();
       } else {
         this->m_resetAttempts();
@@ -140,6 +143,8 @@ void ApplianceBase::m_resetTimeout() {
     if (!--this->m_remainAttempts) {
       if (this->m_request->onError != nullptr)
         this->m_request->onError();
+      // Track failed frame
+      this->m_frameFailure++;
       this->m_destroyRequest();
       return;
     }

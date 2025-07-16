@@ -78,6 +78,11 @@ class ApplianceBase {
   AutoconfStatus getAutoconfStatus() const { return this->m_autoconfStatus; }
   void setAutoconf(bool state) { this->m_autoconfStatus = state ? AUTOCONF_PROGRESS : AUTOCONF_DISABLED; }
   static void setLogger(LoggerFn logger) { dudanov::setLogger(logger); }
+  
+  // Success/Failure tracking methods
+  uint32_t getFrameSuccess() const { return this->m_frameSuccess; }
+  uint32_t getFrameFailure() const { return this->m_frameFailure; }
+  unsigned long getLastSuccessTime() const { return this->m_lastSuccessTime; }
 
  protected:
   std::vector<OnStateCallback> m_stateCallbacks;
@@ -99,6 +104,7 @@ class ApplianceBase {
   virtual void m_onIdle() {}
   /// Calling on receiving request
   virtual void m_onRequest(const Frame &frame) {}
+  
  private:
   struct Request {
     FrameData request;
@@ -153,6 +159,11 @@ class ApplianceBase {
   uint32_t m_timeout{2000};
   // Number of request attempts
   uint8_t m_numAttempts{3};
+  
+  // Success/Failure tracking variables
+  uint32_t m_frameSuccess{0};
+  uint32_t m_frameFailure{0};
+  unsigned long m_lastSuccessTime{0};
 };
 
 }  // namespace midea

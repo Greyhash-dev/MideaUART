@@ -1,5 +1,5 @@
 # MideaUART
-Arduino framework library for controlling Midea home appliances using the UART protocol.
+Arduino framework library for controlling Midea home appliances using the UART protocol with communication tracking.
 
 Control is possible with a custom dongle. You can make it yourself according to numerous instructions on the Internet, or you can buy a ready-made one in [Tindie Shop](https://www.tindie.com/products/24607/), thereby supporting me and my work.
 
@@ -75,6 +75,14 @@ void onStateChange() {
   ac.getPreset();
   ac.getSwingMode();
   ac.getFanMode();
+  
+  // New v1.2.0: Monitor communication health
+  Serial.print("Successful frames: ");
+  Serial.println(ac.getFrameSuccess());
+  Serial.print("Failed frames: ");
+  Serial.println(ac.getFrameFailure());
+  Serial.print("Last success time: ");
+  Serial.println(ac.getLastSuccessTime());
 }
 
 void setup() {
@@ -88,6 +96,30 @@ void loop() {
   ac.loop();
 }
 ```
+
+## New Features (v1.2.0)
+
+### Communication Tracking
+The library now includes robust communication monitoring to help track the health of your connection:
+
+```cpp
+// Get communication statistics
+uint32_t successes = ac.getFrameSuccess();   // Number of successful frame exchanges
+uint32_t failures = ac.getFrameFailure();    // Number of failed frame exchanges
+uint32_t lastSuccess = ac.getLastSuccessTime(); // Timestamp of last successful communication
+
+// Calculate success rate
+float successRate = (successes + failures > 0) ? 
+    (float)successes / (successes + failures) * 100.0f : 0.0f;
+
+Serial.printf("Success rate: %.1f%% (%u/%u)\n", 
+    successRate, successes, successes + failures);
+```
+
+These metrics are automatically tracked in the background and help identify:
+- Connection reliability issues
+- When the last successful communication occurred
+- Overall communication health over time
 
 ## Testing & Development
 
