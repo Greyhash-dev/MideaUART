@@ -102,6 +102,9 @@ void setup() {
     Serial.println("Simulating Midea AC control without hardware");
     Serial.println();
     
+    // Initialize LED
+    pinMode(LED_BUILTIN, OUTPUT);
+    
     // Initial status
     Serial.println("1. Initial AC Status");
     mockAC.sendCommand("GET_STATUS");

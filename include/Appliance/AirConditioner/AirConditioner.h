@@ -39,6 +39,7 @@ class AirConditioner : public ApplianceBase {
   Display getLight() const { return this->m_light; }
   const Capabilities &getCapabilities() const { return this->m_capabilities; }
   void displayToggle() { this->m_displayToggle(); }
+  
  protected:
   void m_getPowerUsage();
   void m_getCapabilities();
@@ -46,6 +47,10 @@ class AirConditioner : public ApplianceBase {
   void m_setStatus(StatusData status);
   void m_displayToggle();
   ResponseStatus m_readStatus(FrameData data);
+  
+  // Success/Failure tracking methods
+  void m_onSuccess();
+  void m_onFailure();
   Capabilities m_capabilities{};
   Timer m_powerUsageTimer;
   float m_indoorHumidity{};
@@ -61,6 +66,7 @@ class AirConditioner : public ApplianceBase {
   Preset m_lastPreset{Preset::PRESET_NONE};
   StatusData m_status{};
   bool m_sendControl{};
+  
 };
 
 }  // namespace ac
